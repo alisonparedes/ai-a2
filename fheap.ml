@@ -1,0 +1,92 @@
+type 'a openHeap = {
+  mutable size : int;
+  mutable data : 'a array
+}
+
+let makeEmptyOpenHeap arrayOfDummyNodes =
+  {
+    size = 0;
+    data = arrayOfDummyNodes (* Can I store the comparator here? *)
+  }
+		      
+let isEmpty openHeap =
+  openHeap.size = 0
+
+let parent i =
+  match i with
+    0 -> -1
+  | i -> (i - 1) / 2
+
+let left i =
+  2 * i + 1
+	    
+let right i =
+  2 * i + 2
+
+let swap heap i j =
+  let temp = heap.data.(i) in
+  heap.data.(i) <- heap.data.(j);
+  heap.data.(j) <- temp
+
+
+let rec bubble_up heap i comparator =
+  match i with
+    0 -> i
+  | i -> let node = heap.data.(i)
+	 and parentNode = heap.data.(parent i) in
+	 if comparator node parentNode < 0 then ( (*if node.g < parentNode.g then *)
+	   swap heap i (parent i);
+	   bubble_up heap (parent i) comparator )
+	 else
+	   i
+
+let rec bubble_down heap i comparator =
+  if left i >= heap.size
+     && right i >= heap.size then
+    i
+  else
+    let node = heap.data.(i)
+    and leftNode = heap.data.(left i)
+    and rightNode = heap.data.(right i) in
+    if right i >= heap.size then
+      if comparator leftNode node < 0 then (      (*      if leftNode.g < node.g then ( *)
+	swap heap (left i) i;
+	bubble_down heap (left i) comparator )
+      else
+	i
+    else
+      if comparator leftNode rightNode <= 0 then      (*      if leftNode.g <= rightNode.g then *)
+	if comparator leftNode node < 0 then (	(*	if leftNode.g < node.g then ( *)
+	  swap heap (left i) i;
+	  bubble_down heap (left i) comparator )
+	else
+	  i
+      else
+	if comparator rightNode node < 0 then	( (*	if rightNode.g < node.g then ( *)
+	  swap heap (right i) i;
+	  bubble_down heap (right i) comparator )
+	else
+	  i
+    
+      
+let add heap node makeArrayOfDummyNodes comparator =
+  let i = heap.size in 
+  heap.size <- heap.size + 1;
+  if heap.size = Array.length heap.data then (
+    heap.data <- Array.append heap.data (makeArrayOfDummyNodes heap.size);
+    heap.data.(i) <- node;
+    bubble_up heap i comparator)
+  else (
+    heap.data.(i) <- node;
+    bubble_up heap i comparator)
+
+let pop heap comparator =
+  let minNode = heap.data.(0) in
+  match heap.size with
+    0 -> None
+  | 1 -> heap.size <- heap.size - 1; 
+	 Some minNode
+  | _ -> heap.size <- heap.size - 1;
+	 swap heap 0 heap.size; (* Assumes size will never be negative *)
+	 let _ = bubble_down heap 0 comparator in
+	 Some minNode

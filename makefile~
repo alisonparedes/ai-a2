@@ -1,0 +1,27 @@
+all:	vacroplan
+
+vacroplan: 	vacroplan.ml fheap
+	ocamlopt -c vacroplan.ml
+	ocamlopt -o run.sh fheap.cmx vacroplan.cmx
+
+debug: 	vacroplan.ml
+	ocamlc -c -g vacroplan.ml
+	ocamlc -g -o run.sh vacroplan.cmo
+
+test:	vacroplan testRunner.ml testVacroplan.ml
+	ocamlopt -c testRunner.ml
+	ocamlopt -c testVacroplan.ml
+	ocamlopt -o test vacroplan.cmx testRunner.cmx testVacroplan.cmx
+
+debugtest:	debug testRunner.ml testVacroplan.ml
+	ocamlc -c -g testRunner.ml
+	ocamlc -c -g testVacroplan.ml
+	ocamlc -g -o test vacroplan.cmo testRunner.cmo testVacroplan.cmo
+
+fheap:	fheap.ml
+	ocamlopt -c fheap.ml
+
+test_fheap:	fheap vacroplan testRunner.ml testFheap.ml
+		ocamlopt -c testRunner.ml
+		ocamlopt -c testFheap.ml
+		ocamlopt -o test fheap.cmx vacroplan.cmx testRunner.cmx testFheap.cmx
