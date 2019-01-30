@@ -206,6 +206,7 @@ let generated ?(bat:bool=false) () =
 
 	 
 let greedySearch ~init:initialState ~exp:expand ~goal:isGoal ?(log:bool=false) ?(bat:bool=false) () =
+  countGen ();
   let start = startNode initialState
   and endNode = ref None in
   let openHeap = Fheap.makeEmptyOpenHeap (makeArrayOfDummyNodes 1) (* Actually a generic heap *)
@@ -237,6 +238,7 @@ let greedySearch ~init:initialState ~exp:expand ~goal:isGoal ?(log:bool=false) ?
 
 	 
 let astarSearch ?(bat:bool=false) ~init:initialState ~exp:expand ~goal:isGoal ~h:h =
+  countGen ();
   let start = startNode initialState
   and endNode = ref None in
   let openHeap = Fheap.makeEmptyOpenHeap (makeArrayOfDummyNodes 1) 
@@ -359,6 +361,7 @@ let pop heap =
 	 Some minNode
 	 
 let uniformCostSearch  ?(bat:bool=false) ~init:initialState ~exp:expand ~goal:isGoal =
+  countGen ();
   let start = startNode initialState
   and endNode = ref None in
   let openHeap = makeEmptyOpenHeap ()
