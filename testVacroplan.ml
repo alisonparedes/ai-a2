@@ -421,7 +421,7 @@ let makeProblemAndStateForRobotInDirtyMap () =
  let test33 =
    let test () =
      let problem, cleanState = makeProblemAndStateForRobotInCleanMap () in
-     let goalNode, _ = depthFirstSearch ~bat:false ~init:cleanState ~exp:(expand problem) ~goal:isGoal in
+     let goalNode, _ = depthFirstSearch ~bat:false ~init:cleanState ~exp:(expand problem) ~goal:isGoal () in
      match goalNode with
        None -> false
      | Some n -> eqState n.state cleanState in
@@ -430,7 +430,7 @@ let makeProblemAndStateForRobotInDirtyMap () =
  let test34 =
    let test () =
      let problem, dirtyState = makeProblemAndStateForRobotInDirtyMap () in
-     let goalNode, _ = depthFirstSearch ~bat:false ~init:dirtyState ~exp:(expand problem) ~goal:isGoal in
+     let goalNode, _ = depthFirstSearch ~bat:false ~init:dirtyState ~exp:(expand problem) ~goal:isGoal () in
      match goalNode with
        None -> false
      | Some n -> isGoal n.state in
@@ -440,7 +440,7 @@ let makeProblemAndStateForRobotInDirtyMap () =
  let test35 =
    let test () =
      let problem, cleanState = makeProblemAndStateForRobotInCleanMap () in
-     let goalNode, _ = depthFirstSearch ~bat:false ~init:cleanState ~exp:(expand problem) ~goal:isGoal in
+     let goalNode, _ = depthFirstSearch ~bat:false ~init:cleanState ~exp:(expand problem) ~goal:isGoal () in
      match goalNode with
        None -> false
      | Some n -> List.length (recoverNodesOnPath n) = 1 in
@@ -450,7 +450,7 @@ let makeProblemAndStateForRobotInDirtyMap () =
  let test36 =
    let test () =
      let problem, cleanState = makeProblemAndStateForRobotInCleanMap () in
-     let goalNode, _ = depthFirstSearch ~bat:false ~init:cleanState ~exp:(expand problem) ~goal:isGoal in
+     let goalNode, _ = depthFirstSearch ~bat:false ~init:cleanState ~exp:(expand problem) ~goal:isGoal () in
      match goalNode with
        None -> false
      | Some n -> eqState (List.hd (recoverNodesOnPath n)).state cleanState in
@@ -459,7 +459,7 @@ let makeProblemAndStateForRobotInDirtyMap () =
  let test37 =
    let test () =
      let problem, dirtyState = makeProblemAndStateForRobotInDirtyMap () in
-     let _, frontierNode = depthFirstSearch ~bat:false ~init:dirtyState ~exp:(expand problem) ~goal:isGoal in
+     let _, frontierNode = depthFirstSearch ~bat:false ~init:dirtyState ~exp:(expand problem) ~goal:isGoal () in
      match frontierNode with
        None -> false
      | Some n -> eqState (List.hd (recoverNodesOnPath n)).state dirtyState in
@@ -468,7 +468,7 @@ let makeProblemAndStateForRobotInDirtyMap () =
  let test37 =
    let test () =
      let problem, dirtyState = makeProblemAndStateForRobotInDirtyMap () in
-     let _, frontierNode = depthFirstSearch ~bat:false ~init:dirtyState ~exp:(expand problem) ~goal:isGoal in
+     let _, frontierNode = depthFirstSearch ~bat:false ~init:dirtyState ~exp:(expand problem) ~goal:isGoal () in
      match frontierNode with
        None -> false
      | Some n -> eqState (List.hd (recoverNodesOnPath n)).state dirtyState in
@@ -477,7 +477,7 @@ let makeProblemAndStateForRobotInDirtyMap () =
  let test38 =
    let test () =
      let problem, dirtyState = makeProblemAndStateForRobotInDirtyMap () in
-     let _, frontierNode = depthFirstSearch ~bat:false ~init:dirtyState ~exp:(expand problem) ~goal:isGoal in
+     let _, frontierNode = depthFirstSearch ~bat:false ~init:dirtyState ~exp:(expand problem) ~goal:isGoal () in
      match frontierNode with
        None -> false
      | Some n -> not (noCycle n.state n) in
@@ -535,7 +535,8 @@ let makeProblemAndStateForRobotInDirtyMap () =
 		action = "None";
 		g = g;
 		parent = None;
-		h = 0
+		h = 0;
+		depth = 0
 	      })
 	    gList
 	    
@@ -545,7 +546,8 @@ let makeProblemAndStateForRobotInDirtyMap () =
      action = "None";
      g = costToCome;
      parent = None;
-     h = estimatedCostToGo
+     h = estimatedCostToGo;
+     depth = 0;
    }
 	    
  let test44 = 
@@ -641,14 +643,58 @@ let makeProblemAndStateForRobotInDirtyMap () =
      startNode.h = 0 in
    addTest test "testStartNodeHIsZero"
 
+ let makeGeneratedNode parentNode =
+   let action = makeGoWest () 
+   and successorState = makeState () in
+   generateNode parentNode action successorState
+
+ let makePathOfKNodes parentNode k =
+   let action = makeGoWest () in
+   let rec gen par i =
+     let successorState = makeState () in
+     let successorNode = generateNode par action successorState in
+     if i = 1 then
+       successorNode
+     else
+       gen successorNode (i - 1) in
+   gen parentNode k
+	   
  let test79 =
    let test () =
-     let parentNode = (makeANode ()) 
-     and action = makeGoWest () 
-     and successorState = makeState () in
-     let newNode = generateNode parentNode action successorState in
+     let parentNode = (makeANode ()) in
+     let newNode = makeGeneratedNode parentNode in
      newNode.h = 0 in
    addTest test "testGeneratedNodeHIsZero"
+
+	   
+ let test80 =
+   let test () =
+     let startNode = startNode (makeState ()) in
+     startNode.depth = 0 in
+   addTest test "testDepthOfStartNodeIsZero"
+
+ let test81 =
+   let test () =
+     let startNode = startNode (makeState ()) in
+     let depth1 = makeGeneratedNode startNode in
+     depth1.depth = 1 in
+   addTest test "testDepthOfSuccessorStartNodeIsOne"
+
+ let test82 =
+   let test () =
+     let startNode = startNode (makeState ()) in
+     let node1 = makeGeneratedNode startNode
+     and node2 = makeGeneratedNode startNode in
+     node1.depth = 1 && node2.depth = 1 in
+   addTest test "testDepthOfBothSuccessorsStartNodeIsOne"
+
+ let test83 =
+   let test () =
+     let startNode = startNode (makeState ())
+       and numberOfNodesToAddAfterStart = 3 in
+     let lastNodeInPath = makePathOfKNodes startNode numberOfNodesToAddAfterStart in
+     lastNodeInPath.depth = numberOfNodesToAddAfterStart in
+   addTest test "testDepthOfPathOfFourNodesIsThree"
 	   
 let main =
   TestRunner.runTests (getTests ())
