@@ -25,7 +25,7 @@ type searchNode = {
 
 type problem = {
   blocked : bool array;
-  recharger : int;
+  recharger : int list;
   charge : int;
   nrows : int;
   ncols : int
@@ -542,7 +542,7 @@ let charge ncols nrows =
 let setCurrentLocation state i =
   state.cur <- i    
     
-let initializeProblem ?(charger=(-1)) ncols nrows obstacleList =
+let initializeProblem ?(charger=[]) ncols nrows obstacleList =
   let problem = {
     blocked = Array.make (ncols * nrows) false;
     recharger = charger;
@@ -596,12 +596,12 @@ let readMap ncols nrows =
 let extractFeatures map = (* test this *)
   let dirtList = ref []
   and robotLocation = ref (-1)
-  and rechargerLocation = ref (-1)
+  and rechargerLocation = ref []
   and obstacleList = ref [] in
   Array.iteri (fun i a ->
 	       match a with
 		 '*' -> dirtList := i :: !dirtList (* Position of dirt will be listed in reverse order *)
-	       | ':' -> rechargerLocation := i
+	       | ':' -> rechargerLocation := i :: !rechargerLocation
 	       | '@' -> robotLocation := i
 	       | '#' -> obstacleList := i :: !obstacleList
 	       | _ -> ())
@@ -676,7 +676,9 @@ let isApplicableGoEast problem state =
   state.cur mod problem.ncols < (problem.ncols - 1) && not problem.blocked.(eastLocation state)
 
 let isApplicableDoCharge problem state =
-  state.cur = problem.recharger
+  List.exists (fun charger ->
+	     state.cur = charger)
+	    problem.recharger
 				     
 
 let applicableActions ?(bat:bool=false) problem state =
