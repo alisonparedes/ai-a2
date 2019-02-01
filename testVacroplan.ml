@@ -7,7 +7,8 @@ let make3x4Problem () =
   and dimension2 = 4
   and obstacleList = [] in
   initializeProblem dimension1 dimension2 obstacleList
-					       
+
+		    
 let test1 =
   let test () =
     let problem = make3x4Problem () in
@@ -421,7 +422,7 @@ let makeProblemAndStateForRobotInDirtyMap () =
  let test33 =
    let test () =
      let problem, cleanState = makeProblemAndStateForRobotInCleanMap () in
-     let goalNode, _ = depthFirstSearch ~bat:false ~init:cleanState ~exp:(expand problem) ~goal:isGoal () in
+     let goalNode = depthFirstSearch ~bat:false ~init:cleanState ~exp:(expand problem) ~goal:isGoal () in
      match goalNode with
        None -> false
      | Some n -> eqState n.state cleanState in
@@ -430,7 +431,7 @@ let makeProblemAndStateForRobotInDirtyMap () =
  let test34 =
    let test () =
      let problem, dirtyState = makeProblemAndStateForRobotInDirtyMap () in
-     let goalNode, _ = depthFirstSearch ~bat:false ~init:dirtyState ~exp:(expand problem) ~goal:isGoal () in
+     let goalNode = depthFirstSearch ~bat:false ~init:dirtyState ~exp:(expand problem) ~goal:isGoal () in
      match goalNode with
        None -> false
      | Some n -> isGoal n.state in
@@ -440,7 +441,7 @@ let makeProblemAndStateForRobotInDirtyMap () =
  let test35 =
    let test () =
      let problem, cleanState = makeProblemAndStateForRobotInCleanMap () in
-     let goalNode, _ = depthFirstSearch ~bat:false ~init:cleanState ~exp:(expand problem) ~goal:isGoal () in
+     let goalNode = depthFirstSearch ~bat:false ~init:cleanState ~exp:(expand problem) ~goal:isGoal () in
      match goalNode with
        None -> false
      | Some n -> List.length (recoverNodesOnPath n) = 1 in
@@ -450,38 +451,11 @@ let makeProblemAndStateForRobotInDirtyMap () =
  let test36 =
    let test () =
      let problem, cleanState = makeProblemAndStateForRobotInCleanMap () in
-     let goalNode, _ = depthFirstSearch ~bat:false ~init:cleanState ~exp:(expand problem) ~goal:isGoal () in
+     let goalNode = depthFirstSearch ~bat:false ~init:cleanState ~exp:(expand problem) ~goal:isGoal () in
      match goalNode with
        None -> false
      | Some n -> eqState (List.hd (recoverNodesOnPath n)).state cleanState in
    addTest test "testInitialStateOnPathWhenInitialStateIsAGoalState"
-
- let test37 =
-   let test () =
-     let problem, dirtyState = makeProblemAndStateForRobotInDirtyMap () in
-     let _, frontierNode = depthFirstSearch ~bat:false ~init:dirtyState ~exp:(expand problem) ~goal:isGoal () in
-     match frontierNode with
-       None -> false
-     | Some n -> eqState (List.hd (recoverNodesOnPath n)).state dirtyState in
-   addTest test "testInitialStateOnPath"
-
- let test37 =
-   let test () =
-     let problem, dirtyState = makeProblemAndStateForRobotInDirtyMap () in
-     let _, frontierNode = depthFirstSearch ~bat:false ~init:dirtyState ~exp:(expand problem) ~goal:isGoal () in
-     match frontierNode with
-       None -> false
-     | Some n -> eqState (List.hd (recoverNodesOnPath n)).state dirtyState in
-   addTest test "testInitialStateOnPath"
-
- let test38 =
-   let test () =
-     let problem, dirtyState = makeProblemAndStateForRobotInDirtyMap () in
-     let _, frontierNode = depthFirstSearch ~bat:false ~init:dirtyState ~exp:(expand problem) ~goal:isGoal () in
-     match frontierNode with
-       None -> false
-     | Some n -> not (noCycle n.state n) in
-   addTest test "testCycle"
 
  let test39 =
    let test () =
@@ -695,6 +669,174 @@ let makeProblemAndStateForRobotInDirtyMap () =
      let lastNodeInPath = makePathOfKNodes startNode numberOfNodesToAddAfterStart in
      lastNodeInPath.depth = numberOfNodesToAddAfterStart in
    addTest test "testDepthOfPathOfFourNodesIsThree"
+
+ let test84 =
+   let test () =
+     let dirtList = [1; 2; 3; 4]
+     and problem = make3x4Problem () in
+     let edges = makeEdges problem dirtList in
+     List.length edges = 6 in
+   addTest test "testNumberOfEdges"
+
+ let test85 =
+   let test () =
+     let x1 = 10
+     and x2 = 0
+     and y1 = 10
+     and y2 = 0 in
+     manhatanDistance x1 y1 x2 y2 = 20 in
+   addTest test "testManhatanDistance0_0And10_10Is20"
+
+ let test86 =
+   let test () =
+     let position = 2
+     and ncols = 4 in
+     calculateX ncols position = position in
+   addTest test "testXOf2In4ColIs2"
+
+ let test87 =
+   let test () =
+     let position = 6
+     and ncols = 4 in
+     calculateX ncols position = 2 in
+   addTest test "testXOf6In4ColIs2"
+
+ let test88 =
+   let test () =
+     let position = 6
+     and ncols = 4 in
+     calculateY ncols position = 1 in
+   addTest test "testYOf6In3RowIs1"
+
+ let test89 =
+   let test () =
+     let set = makeSetNode 1 in
+     set.set == set in
+   addTest test "testNewSetNodeIsItsOwnSet"
+
+ let test90 =
+   let test () =
+     let problem = make3x4Problem () in
+     let addSet, findSet, unionSet = setFinder problem
+     and dirtPosition = 1 in
+     addSet dirtPosition;
+     let newSetNode = findSet dirtPosition in
+     newSetNode.data = dirtPosition in
+   addTest test "testFindSetFindsAddedSetNode"
+
+ let test90 =
+   let test () =
+     let problem = make3x4Problem () in
+     let addSet, findSet, unionSet = setFinder problem
+     and dirtPosition = 1 in
+     addSet dirtPosition;
+     let newSetNode = findSet dirtPosition in
+     newSetNode.set == newSetNode in
+   addTest test "testRepresentativeSetIsItself"
+
+ let test91 =
+   let test () =
+     let problem = make3x4Problem () in
+     let addSet, findSet, unionSet = setFinder problem
+     and dirtPos1 = 1
+     and dirtPos2 = 2 in
+     addSet dirtPos1;
+     addSet dirtPos2;
+     let set1 = findSet dirtPos1
+     and set2 = findSet dirtPos2 in
+     unionSet set1 set2;
+     set1 == findSet dirtPos2 in
+   addTest test "testUnionSet2IntoSet1"
+
+ let test92_1 =
+   let test () =
+     let problem = make3x4Problem () 
+     and dirtList = [0; 11] in
+     let edgeHeap = makeEdgesBetweenDirt problem dirtList in
+     edgeHeap.Fheap.size = 1 in
+   addTest test "testEdgeHeapInTwoDirtStateHasOneEdge"
+
+ let test92 =
+   let test () =
+     let problem = make3x4Problem () 
+     and dirtList = [0; 11] in
+     let tree = minimumSpanningTree problem dirtList in
+     List.length tree = 1 in
+   addTest test "testMinSpanTreeInTwoDirtStateHasOneEdge"
+
+ let test92 =
+   let test () =
+     let problem = make3x4Problem () 
+     and dirtList = [0; 11] in
+     let tree = minimumSpanningTree problem dirtList in
+     List.length tree = 1 in
+   addTest test "testMinSpanTreeInTwoDirtStateHasOneEdge"
+
+ let test93 =
+   let test () =
+     let problem = make3x4Problem () 
+     and dirtList = [0; 3; 11] in
+     let tree = minimumSpanningTree problem dirtList in
+     List.length tree = 2 in
+   addTest test "testMinSpanTreeInThreeDirtStateHasTwoEdges"
+
+ let test93 =
+   let test () =
+     let problem = make3x4Problem () 
+     and dirtList = [0; 3; 11] in
+     let tree = minimumSpanningTree problem dirtList in
+     sumEdgeWeights tree = 5 in
+   addTest test "testMinSpanTreeInThreeDirtStateHasTwoEdges"
+   
+ let test94 =
+   let test () =
+     let maxCharge = 11
+     and curCharge = 0
+     and minSpan = 10
+     and numberOfDirt = 1 in
+     chargesNeeded maxCharge curCharge minSpan numberOfDirt = 1 in
+   addTest test "testOneChargeNeeded"
+
+ let test95 =
+   let test () =
+     let maxCharge = 11
+     and curCharge = 11
+     and minSpan = 10
+     and numberOfDirt = 1 in
+     chargesNeeded maxCharge curCharge minSpan numberOfDirt = 0 in
+   addTest test "testNoChargeNeeded"
+
+ let test95 =
+   let test () =
+     let maxCharge = 11
+     and curCharge = 11
+     and minSpan = 20
+     and numberOfDirt = 3 in
+     let chargesNeeded = chargesNeeded maxCharge curCharge minSpan numberOfDirt in
+     chargesNeeded = 1 in
+   addTest test "testOneChargesNeeded"
+	   
+ let test96 =
+   let test () =
+     let chargerLoc = 1 
+     and edge = {weight=1; u=1; v=2} in
+     let edgeList = [edge] in
+     match minEdgeAdjacentToCharger chargerLoc edgeList with
+       None -> false
+     | Some min -> min == edge in
+   addTest test "testOnlyEdgeMustBeMinEdge"
+
+ let test96 =
+   let test () =
+     let chargerLoc = 1 
+     and edge1 = {weight=1; u=2; v=2} 
+     and edge2 = {weight=2; u=2; v=1} in
+     let edgeList = [edge1; edge2] in
+     match minEdgeAdjacentToCharger chargerLoc edgeList with
+       None -> false
+     | Some min -> min == edge2 in
+   addTest test "testMinAdjacentEdgeIsMinEdge"
+				  
 	   
 let main =
   TestRunner.runTests (getTests ())

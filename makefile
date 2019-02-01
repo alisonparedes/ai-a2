@@ -5,8 +5,9 @@ vacroplan: 	vacroplan.ml fheap
 	ocamlopt -o run.sh fheap.cmx vacroplan.cmx
 
 debug: 	vacroplan.ml
+	ocamlc -c -g fheap.ml
 	ocamlc -c -g vacroplan.ml
-	ocamlc -g -o run.sh vacroplan.cmo
+	ocamlc -g -o run.sh fheap.cmo vacroplan.cmo
 
 test_vacroplan:	vacroplan testRunner.ml testVacroplan.ml
 	ocamlopt -c testRunner.ml
@@ -16,7 +17,7 @@ test_vacroplan:	vacroplan testRunner.ml testVacroplan.ml
 debugtest:	debug testRunner.ml testVacroplan.ml
 	ocamlc -c -g testRunner.ml
 	ocamlc -c -g testVacroplan.ml
-	ocamlc -g -o test vacroplan.cmo testRunner.cmo testVacroplan.cmo
+	ocamlc -g -o test fheap.cmo vacroplan.cmo testRunner.cmo testVacroplan.cmo
 
 fheap:	fheap.ml
 	ocamlopt -c fheap.ml

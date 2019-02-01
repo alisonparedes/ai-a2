@@ -46,7 +46,7 @@ let printStateToStdout state =
 	     Printf.fprintf stdout "d:%d %!" dirt)
 	    state.dirt;
   Printf.fprintf stdout "ch:%d %!" state.charge
-		 
+
 (* Assumes two dirt lists if they were both sorted *)
 let eqSetOfDirt dirtListA dirtListB =
     let rec comp listA listB =
@@ -67,31 +67,167 @@ let eqState ?(bat:bool=false) stateA stateB =
      || (bat && stateA.charge = stateB.charge))
 		 
 
+let h1 state =
+  List.length state.dirt
+
+type edge = {
+  weight : int;
+  u : int;
+  v : int
+}
+
+let manhatanDistance x1 y1 x2 y2 =
+  abs (x1 - x2) + abs (y1 - y2)
+
+let calculateX ncols position =
+  position mod ncols
+
+let calculateY ncols position =
+  position / ncols
+
+let distanceBetweenPositions problem u v =
+  let u_x = calculateX problem.ncols u
+  and u_y = calculateY problem.ncols u
+  and v_x = calculateX problem.ncols v
+  and v_y = calculateY problem.ncols v in
+  manhatanDistance u_x u_y v_x v_y
+
+	      
+let makeEdges problem dirtList =
+  let edges = ref [] in
+  let rec edge u dirtListTail =
+    match dirtListTail with
+      [] -> ()
+    | hd :: tl ->  List.iter (fun v ->
+			      let newEdge = {
+			       weight=distanceBetweenPositions problem u v;
+			       u=u;
+			       v=v } in
+			     edges := newEdge :: !edges)
+			    dirtListTail;
+		   edge hd tl in
+  match dirtList with
+    [] -> !edges
+  | hd :: tl -> edge hd tl;
+		!edges
+   
+type 'a setNode = {
+  data : 'a;
+  mutable set : 'a setNode
+}
+
+let makeSetNode data =
+  let rec setNode =
+  {
+    data=data;
+    set=setNode
+  } in
+  setNode
+
+let setFinder problem  =
+  let dummySetNode = makeSetNode (-1) in
+  let perfectHash = Array.make (problem.nrows * problem.ncols) dummySetNode in
+  let addSet dirtPosition =
+    let newSetNode = makeSetNode dirtPosition in
+    perfectHash.(dirtPosition) <- newSetNode
+  and findSet dirtPosition =
+    let rec find setNode =
+      if setNode.set == setNode then
+	setNode
+      else
+	find setNode.set in
+    find perfectHash.(dirtPosition)
+  and unionSet setA setB =
+    setB.set <- setA in
+  addSet, findSet, unionSet
+
+let makeArrayOfDummyEdges size =
+  let edge = {weight=(-1);
+	      u=(-1);
+	      v=(-1)} in
+  Array.make size edge
+
+let compareEdgesByWeight edge1 edge2 =
+  edge1.weight - edge2.weight
+
+		   
+let makeEdgesBetweenDirt problem dirtList =
+  let edgeHeap = Fheap.makeEmptyOpenHeap (makeArrayOfDummyEdges 1)  (* Actually a generic heap, and not just for open nodes :D *)
+  and edges = makeEdges problem dirtList in
+  List.iter (fun edge -> let _ = Fheap.add edgeHeap edge makeArrayOfDummyEdges compareEdgesByWeight in () ) edges;
+  edgeHeap
+
+    
+	     
+let minimumSpanningTree problem dirtList =
+  let edges = ref []
+  and edgeHeap = makeEdgesBetweenDirt problem dirtList 
+  and addSet, findSet, unionSet = setFinder problem in
+  List.iter (fun dirt -> addSet dirt) dirtList;
+  let rec addLightEdge ()  =
+    match Fheap.pop edgeHeap compareEdgesByWeight with
+      None -> ()
+    | Some edge -> let uSet = findSet edge.u
+		   and vSet = findSet edge.v in
+		   if not (uSet == vSet) then (
+		     edges := edge :: !edges;
+		     unionSet uSet vSet;
+		   );
+		   addLightEdge () in
+  addLightEdge ();
+  !edges 
+
+   
+let sumEdgeWeights edgeList =
+  List.fold_left (fun a b -> b.weight + a) 0 edgeList
+   
+let h2 problem state =
+  sumEdgeWeights (minimumSpanningTree problem state.dirt)
+
+let chargesNeeded maxCharge curCharge minSpanWithoutCharger numberOfDirt =
+  (minSpanWithoutCharger + numberOfDirt - curCharge) / maxCharge
+
+let minEdgeAdjacentToCharger chargerLoc edgeList =
+  let edgeHeap = Fheap.makeEmptyOpenHeap (makeArrayOfDummyEdges 1) in
+  List.iter (fun edge ->
+	     if edge.u = chargerLoc
+		|| edge.v = chargerLoc then
+	       let _ = Fheap.add edgeHeap edge makeArrayOfDummyEdges compareEdgesByWeight in ())
+	    edgeList;
+  Fheap.pop edgeHeap compareEdgesByWeight
+	    
+let h3 problem state =
+  let spanNoCharger = sumEdgeWeights (minimumSpanningTree problem (state.cur :: state.dirt)) in
+  let chargesNeeded = chargesNeeded problem.charge state.charge spanNoCharger (List.length state.dirt) in
+  h2 problem state + chargesNeeded
+	    
 let isGoal state =
   state.dirt = []
 
 let costToCome parentNode actionCost =
   parentNode.g + actionCost
-		 
-let generateNode parentNode action state  =
+
+let h0 state =
+  0
+		   
+let generateNode ?(h:(state -> int)=h0) parentNode action state  =
   {
     state=state;
     action=action.name;
     g=costToCome parentNode action.cost;
     parent=Some parentNode;
-    h=0; (* TODO: Calculate huristic function on generation *)
+    h=h state; 
     depth= parentNode.depth + 1
   }
 
-
     
-let startNode state =
+let startNode ?(h:(state -> int)=h0) state =
   {
     state=state;
     action="None";
     g=0;
     parent=None;
-    h=0; (* TODO: Calculate heuristic funciton on generation *)
+    h=h state; 
     depth=0;
   }
 
@@ -135,17 +271,14 @@ let getGen, getExp, countGen, countExp = counter ()
 let depthFirstSearch  ?(bat:bool=false) ~init:initialState ~exp:expand ~goal:isGoal ?(id:bool=false) ?(depth:int=0) () =
   countGen ();
   let start = startNode initialState
-  and endNode = ref None
-  and lastExpanded = ref None in (* For testing *)
+  and endNode = ref None in
   let stack = ref (start :: []) in
   let rec search () =
     match !stack with
       [] -> ()
-    | _ ->
-       let node = List.hd !stack in
-       stack := List.tl !stack;
+    | node :: tl ->
+       stack := tl;
        countExp ();
-       lastExpanded := Some node;
        if isGoal node.state then
 	 endNode := Some node
        else 
@@ -162,16 +295,16 @@ let depthFirstSearch  ?(bat:bool=false) ~init:initialState ~exp:expand ~goal:isG
 			 gen tl in
 	 gen (expand node.state) in
   search ();
-  !endNode, !lastExpanded
+  !endNode
 
 let iterativeDeepeningDepthFirstSearch ?(bat:bool=false) ~init:initialState ~exp:expand ~goal:isGoal ?(log:bool=false) () =
   let rec search depth =
     match depthFirstSearch ~bat:bat ~id:true ~depth:depth ~init:initialState ~exp:expand ~goal:isGoal () with
-      None, _ ->
+      None->
       if log then
 	Printf.fprintf stdout "gen:%d exp:%d\n%!" (getGen ()) (getExp());
       search (depth + 1)
-    | goalNode, _ -> goalNode in
+    | goalNode -> goalNode in
   search 0
 
 let makeArrayOfDummyNodes length =
@@ -237,9 +370,9 @@ let greedySearch ~init:initialState ~exp:expand ~goal:isGoal ?(log:bool=false) ?
 					 
 
 	 
-let astarSearch ?(bat:bool=false) ~init:initialState ~exp:expand ~goal:isGoal ~h:h =
+let astarSearch ?(bat:bool=false) ~init:initialState ~exp:expand ~goal:isGoal ~h:h ?(id:bool=false) ?(depth:int=0) () =
   countGen ();
-  let start = startNode initialState
+  let start = startNode ~h:h initialState
   and endNode = ref None in
   let openHeap = Fheap.makeEmptyOpenHeap (makeArrayOfDummyNodes 1) 
   and addGen, neverGen = generated ~bat () in
@@ -256,16 +389,28 @@ let astarSearch ?(bat:bool=false) ~init:initialState ~exp:expand ~goal:isGoal ~h
 		       match states with
 			 [] -> search ()
 		       | hd :: tl -> let action, successorState = hd in
-				     if neverGen successorState then (
+				     if neverGen successorState
+					&& (not id
+					    || id && node.depth < depth) then ( (* To support iterative deepening astar *)
 				       countGen ();
-				       let newNode = (generateNode node action successorState) in
+				       let newNode = (generateNode ~h:h node action successorState) in
 				       addGen newNode;
 				       let _ = Fheap.add openHeap newNode makeArrayOfDummyNodes compareNodesByF in ());
 				     gen tl in
 		     gen (expand node.state) in
   search ();
   !endNode
-      
+
+
+let iterativeDeepeningAstarSearch  ~init:initialState ~exp:expand ~goal:isGoal ~h:h ?(bat:bool=false) ?(log:bool=false) () =
+  let rec search depth =
+    match astarSearch ~bat:bat ~init:initialState ~exp:expand ~goal:isGoal ~h:h ~id:true ~depth:depth () with
+      None ->
+            if log then
+	      Printf.fprintf stdout "gen:%d exp:%d\n%!" (getGen ()) (getExp());
+	    search (depth + 1) (* This will run forever is there is no solution even in a finite search space*)
+    | goalNode -> goalNode in
+  search 0
 
 type 'a openHeap = {
   mutable size : int;
@@ -635,13 +780,12 @@ let run ?(log:bool=false) algorithm battery initialState problem heuristic =
 			  ~init:initialState
 			  ~exp:(expand ~bat:battery problem)
 			  ~goal:isGoal 
-    | "depth-first" -> let g, _ = depthFirstSearch
-				    ~bat:battery
-				    ~init:initialState
-				    ~exp:(expand ~bat:battery problem)
-				    ~goal:isGoal
-				    () in
-		       g
+    | "depth-first" -> depthFirstSearch
+			 ~bat:battery
+			 ~init:initialState
+			 ~exp:(expand ~bat:battery problem)
+			 ~goal:isGoal
+			 ()
     | "depth-first-id" -> iterativeDeepeningDepthFirstSearch
 				    ~bat:battery
 				    ~init:initialState
@@ -663,6 +807,16 @@ let run ?(log:bool=false) algorithm battery initialState problem heuristic =
 		    ~exp:(expand ~bat:battery problem)
 		    ~goal:isGoal
 		    ~h:heuristic
+		    ()
+		    
+    | "ida-star" -> iterativeDeepeningAstarSearch
+		    ~bat:battery
+		    ~init:initialState
+		    ~exp:(expand ~bat:battery problem)
+		    ~goal:isGoal
+		    ~h:heuristic
+		    ~log:log
+		    ()
     | _ -> None
 	   
 let main () =
@@ -685,19 +839,22 @@ let main () =
   let goalNode = ref None 
   and battery = ref false
   and algorithm = ref "none"
-  and heuristic = ref "none"
+  and heuristic = ref h0
   and log = ref false in (* For regression testing *)
   Arg.parse [("-battery", Arg.Set battery, "");
 	    ("-log", Arg.Set log, "")]
 	    (fun arg ->
 	     match arg with
 	     "depth-first" | "depth-first-id" | "uniform-cost" | "a-star" | "ida-star" | "greedy"  -> algorithm := arg;
-	     | "h0" | "h1" | "h2" -> heuristic := arg
+	     | "h0" -> heuristic := h0
+	     | "h1" -> heuristic := h1
+	     | "h2" -> heuristic := h2 problem
+	     | "h3" -> heuristic := h3 problem
 	     | _ -> () )
 	    "";
 
   if !log then
-    Printf.fprintf stdout "%s %s %b\n%!" !algorithm !heuristic !battery;
+    Printf.fprintf stdout "%s %b\n%!" !algorithm !battery;
   
   goalNode := run ~log:!log !algorithm !battery initialState problem !heuristic;
 	   
@@ -710,4 +867,4 @@ let main () =
 let main =
       main () 
 				
-		
+
