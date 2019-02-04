@@ -338,9 +338,9 @@ let generated ?(bat:bool=false) () =
   add, neverGenerated
 
 	 
-let greedySearch ~init:initialState ~exp:expand ~goal:isGoal ?(log:bool=false) ?(bat:bool=false) () =
+let greedySearch ~init:initialState ~exp:expand ~goal:isGoal ?(log:bool=false) ?(bat:bool=false) ~h:h () =
   countGen ();
-  let start = startNode initialState
+  let start = startNode ~h:h initialState
   and endNode = ref None in
   let openHeap = Fheap.makeEmptyOpenHeap (makeArrayOfDummyNodes 1) (* Actually a generic heap *)
   and addGen, neverGen = generated ~bat () in
@@ -360,7 +360,7 @@ let greedySearch ~init:initialState ~exp:expand ~goal:isGoal ?(log:bool=false) ?
 		       | hd :: tl -> let action, successorState = hd in
 				     if neverGen successorState then (
 				       countGen ();
-				       let newNode = (generateNode node action successorState) in
+				       let newNode = (generateNode ~h:h node action successorState) in
 				       addGen newNode;
 				       let _ = Fheap.add openHeap newNode makeArrayOfDummyNodes compareNodesByHOnly in ());
 				     gen tl in
@@ -801,6 +801,7 @@ let run ?(log:bool=false) algorithm battery initialState problem heuristic =
 		    ~exp:(expand ~bat:battery problem)
 		    ~goal:isGoal
 		    ~log:log
+		    ~h:heuristic
 		    ()
 		    
     | "a-star" -> astarSearch
